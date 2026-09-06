@@ -1,0 +1,28 @@
+{
+  "name": "@ecnu-agent/remotion-environment",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Pinned shared Remotion runtime for ChatECNU Work",
+  "dependencies": {
+    "playwright": "1.63.0-alpha-2026-08-05",
+    "@remotion/bundler": "4.0.499",
+    "@remotion/captions": "4.0.499",
+    "@remotion/media": "4.0.499",
+    "@remotion/renderer": "4.0.499",
+    "mediabunny": "1.51.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.499",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "fast-uri": "3.1.5",
+    "nanoid": "3.3.18"
+  }
+}

@@ -1,0 +1,154 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to select; both packages are always checked and built
+        required: true
+        type: choice
+        options: [shared, studio]
+        default: shared
+      ref:
+        description: Source ref or commit to build
+        required: true
+        type: string
+        default: main
+      tag:
+        description: Existing shared-vVERSION or studio-vVERSION tag; required for publishing
+        required: false
+        type: string
+        default: ''
+      publish:
+        description: Publish the checked tarball through the configured npm trusted publisher
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      PYTHONUTF8: '1'
+      RELEASE_PACKAGE: ${{ inputs.package }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_PUBLISH: ${{ inputs.publish }}
+    outputs:
+      commit: ${{ steps.gate.outputs.commit }}
+      artifact: release-packages-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate source, versions, tag, and previous exact-commit CI
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-gate.mjs preflight
+      - uses: actions/setup-python@v6
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Install locked npm dependencies, including the local workspace
+        run: npm ci
+      - name: Install Python Office dependencies
+        run: python -m pip install --requirement packages/artifact-services/python/requirements.txt
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Select the shared test browser
+        run: node scripts/prepare-test-runtime.mjs
+      - name: Typecheck, build, test, audit, and pack both packages
+        env:
+          DSH_OFFICE_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: npm run check
+      - name: Browser UI regression
+        env:
+          DSH_OFFICE_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: npm run test:ui
+      - name: Isolated DSH 0.1.2-rc.1 host regression
+        env:
+          DSH_OFFICE_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: npm run test:host
+      - name: Real PDF and video poster exports
+        env:
+          DSH_OFFICE_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: npm run test:exports
+      - name: Bind checked package bytes to the source commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-gate.mjs record
+      - name: Upload checked package candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/packages/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/reports/
+            dist/ui/
+            dist/exports/
+            dist/host/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    if: inputs.publish && github.repository == 'freedomkk-qfeng/dsh-knowledge-studio'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      RELEASE_PACKAGE: ${{ inputs.package }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_PUBLISH: 'true'
+      RELEASE_EXPECTED_COMMIT: ${{ needs.build.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Use npm 11 with trusted publishing support
+        run: npm install --global npm@11
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact }}
+          path: dist/packages/
+      - name: Verify package bytes, tag, successful CI, and shared registry dependency
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-gate.mjs verify
+      - name: Publish the exact checked tarball through npm OIDC
+        env:
+          RELEASE_TARBALL: ${{ steps.gate.outputs.tarball }}
+        run: npm publish "$RELEASE_TARBALL" --access public --provenance --ignore-scripts --registry=https://registry.npmjs.org

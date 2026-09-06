@@ -1,0 +1,74 @@
+{
+  "name": "@eduwork/dsh-artifact-services",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared Office, speech and media services for applications and DSH tools",
+  "license": "MIT",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./office": "./lib/office.js",
+    "./office-tools": "./lib/office-tools.js",
+    "./speech": "./lib/speech.js",
+    "./media": "./lib/media.js",
+    "./timeline": "./lib/timeline.js",
+    "./providers": "./lib/providers.js",
+    "./video-runner": "./lib/video-runner.js",
+    "./dsh": "./lib/dsh.js",
+    "./office-preview": "./lib/office-preview.js",
+    "./music": "./lib/music.js",
+    "./runtime": "./lib/runtime.js",
+    "./remotion": "./lib/remotion.js",
+    "./video-template": "./lib/video-template.js"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/*.ps1",
+    "python/**/*.py",
+    "python/requirements.txt",
+    "skills/**",
+    "templates/**",
+    "media/**",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dependencies": {
+    "@remotion/bundler": "4.0.520",
+    "@remotion/renderer": "4.0.520",
+    "@remotion/media": "4.0.520",
+    "@remotion/captions": "4.0.520",
+    "mediabunny": "1.51.0",
+    "remotion": "4.0.520",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.2",
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freedomkk-qfeng/dsh-knowledge-studio.git",
+    "directory": "packages/artifact-services"
+  },
+  "homepage": "https://github.com/freedomkk-qfeng/dsh-knowledge-studio/tree/main/packages/artifact-services#readme",
+  "bugs": {
+    "url": "https://github.com/freedomkk-qfeng/dsh-knowledge-studio/issues"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
